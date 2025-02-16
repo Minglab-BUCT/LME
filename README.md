@@ -32,7 +32,15 @@ The binary files should contain:
 - lmers: The main program of LME.
 - obabelme: Tools convert other molecular files between common format to LME format.
 
-The binary files of x64 Linux platform is provided in releases. 
+The binary files of x64 Linux platform is provided in releases.
+
+### Build from source
+
+The core of LME is written in Rust, please follow the [instruction](https://www.rust-lang.org/tools/install) from rust-lang.org to setup the environment.
+
+When finish the installation of Rust, switch to the directory of the LME and execute `cargo build`, the binary files will be generated under the folder of `target/debug`
+
+To generate a release version for better performance, execute `cargo build --release`, the binary files will be generated under the folder of `target/release`.
 
 ## Examples
 
