@@ -1,4 +1,4 @@
-use lmers::{layer::Layer, sparse_molecule::SparseMolecule};
+use crate::{layer::Layer, sparse_molecule::SparseMolecule};
 use redb::{Database, ReadableTableMetadata, TableDefinition};
 use std::{
     collections::{BTreeMap, BTreeSet},

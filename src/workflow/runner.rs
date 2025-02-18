@@ -1,8 +1,14 @@
+use crate::{
+    external::{obabel::obabel, regexsed::regex_sed},
+    io::{BasicIOMolecule, NamespaceMapping},
+    layer::{Layer, SelectOne},
+    layer::{LayerStorageError, SelectMany},
+    sparse_molecule::SparseMolecule,
+    utils::fs::copy_skeleton,
+};
 use anyhow::{anyhow, Context, Result};
 use cached::{proc_macro::cached, SizedCache};
 use fancy_regex::Regex;
-use lmers::layer::{LayerStorageError, SelectMany};
-use lmers::utils::fs::copy_skeleton;
 use nalgebra::Vector3;
 use std::collections::BTreeSet;
 use std::fs::File;
@@ -10,12 +16,6 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{collections::BTreeMap, io::Write};
 
-use lmers::{
-    external::{obabel::obabel, regexsed::regex_sed},
-    io::{BasicIOMolecule, NamespaceMapping},
-    layer::{Layer, SelectOne},
-    sparse_molecule::SparseMolecule,
-};
 use serde::Deserialize;
 use tempfile::tempdir;
 
@@ -116,59 +116,108 @@ impl Retain3DItem {
 #[derive(Default, Debug, Deserialize)]
 #[serde(tag = "with")]
 pub enum Runner {
-    ManualBreak {
+    /// When the targeted file not exists, stop the LME at the step.
+    Break {
+        /// The filepath to check if exists
         filepath: String,
     },
-    CountBreak {
-        filepath: String,
-        times: usize,
-    },
+    #[doc = include_str!("docs/AppendLayers.md")]
     AppendLayers {
+        /// Layeres append to the structures.
         layers: Vec<Layer>,
     },
+    #[doc = include_str!("docs/DistributeLayers.md")]
     DistributeLayers(BTreeMap<String, Layer>),
+    #[doc = include_str!("docs/Substituent.md")]
     Substituent {
         address: BTreeMap<String, (SelectOne, SelectOne)>,
         file_pattern: Vec<String>,
     },
+    /// Plugin runner will output the current workspace into a JSON file and 
+    /// call the program specified to handle it, and take the JSON output as
+    /// the updated workspace.
     Plugin {
+        /// The command to call
         command: String,
+        /// The CLI arguments passed to the program
         arguments: Vec<String>,
     },
     Retain {
+        /// Negate select, if this is true, all strcutures matched by `pattern` will be dropped.
         #[serde(default)]
         negate: bool,
+        /// Regular expression for matching the name of the structure name
         pattern: String,
     },
     // Retain3D(Vec<Retain3DItem>),
     Rename(RenameOptions),
+    #[doc = include_str!("docs/Calculation.md")]
     Calculation {
+        /// Set the working directory, for each structure in workspace, 
+        /// a directory will be created under the given working directory.
         working_directory: PathBuf,
+        /// Set the format of the input file of the calculation program
         pre_format: FormatOptions,
+        /// Set the input filename for the calculation program
         pre_filename: String,
+        /// Using serial mode to execute the calculation program.
+        /// 
+        /// Set it to `true` if the calculation program itself could take 
+        /// advantages of multi-core CPUs.
         #[serde(default)]
         serial_mode: bool,
+        /// Set the template directory of the calculation
         #[serde(default)]
         skeleton: Option<PathBuf>,
+        /// Rename the structure for output, please see `RenameOptions` for detailed use.
         #[serde(default)]
         redirect_to: Option<RenameOptions>,
+        /// Input the input file from stdin (true/false)
+        /// 
+        /// Default to false
         #[serde(default)]
         stdin: bool,
+        /// The program to start, use a program name in PATH or give an absolute path.
+        /// 
+        /// Following folders will be automatically add to PATH when starting the program:
+        /// 
+        /// - the `bin` directory in the working directory (where the input file is)
+        /// - the directory where LME executable program is
+        /// 
+        /// If no program need to be execute, ignore this field
         #[serde(default)]
         program: Option<String>,
+        /// The CLI arguments of the program to be called. 
+        /// 
+        /// It's a list of strings, if there is numbers like `48`, write `'48'` instead
         #[serde(default)]
         args: Vec<String>,
+        /// The environment variables to be set for the program to be called.
+        /// 
+        /// It's a map of environment variable key and values.
         #[serde(default)]
         envs: BTreeMap<String, String>,
+        /// The output file format and filename
+        /// 
+        /// like `[xyz, output.xyz]`, ignore if the calculation result
+        /// should not be used to update the structure.
         #[serde(default)]
         post_file: Option<(String, String)>,
+        /// Continue even if some calculation failed, default to false which means if one 
+        /// structure calculation failed, the LME will abort the following task. 
+        /// 
+        /// If not every result is necessary or you want to drop some structures by calculation,
+        /// set this to true.
         #[serde(default)]
         ignore_failed: bool,
+        /// Redirect the stdout of the program to a file. Ignore if the output is not necessary
         #[serde(default)]
         stdout: Option<String>,
+        /// Redirect the stderr of the program to a file. Ignore if the error log is not necessary
         #[serde(default)]
         stderr: Option<String>,
     },
+    /// Do nothing but leave a checkpoint if the `name` field is set in the steps
     #[default]
     CheckPoint,
 }
@@ -627,38 +676,12 @@ impl Runner {
                     })
                     .collect::<Result<BTreeMap<_, _>>>()?,
             )),
-            Self::ManualBreak { filepath } => {
+            Self::Break { filepath } => {
                 if std::fs::exists(filepath)? {
                     Ok(RunnerOutput::None)
                 } else {
                     Err(anyhow!(
                         "File {} not exists, break. Create it to continue",
-                        filepath
-                    ))
-                }
-            }
-            Self::CountBreak { filepath, times } => {
-                let counter: usize = if let Ok(counter) = std::fs::read_to_string(filepath) {
-                    counter.parse().with_context(|| {
-                        format!(
-                            "Unable to parse counter file content {} in {}",
-                            counter, filepath
-                        )
-                    })?
-                } else {
-                    0
-                };
-                let next_counter = counter + 1;
-                std::fs::write(filepath, format!("{}", next_counter)).with_context(|| {
-                    format!("Failed to write counter information to {}", filepath)
-                })?;
-                if counter >= *times {
-                    Ok(RunnerOutput::None)
-                } else {
-                    Err(anyhow!(
-                        "Current break times: {}, require break {} times, flag file: {}",
-                        counter,
-                        times,
                         filepath
                     ))
                 }

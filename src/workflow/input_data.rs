@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use lmers::sparse_molecule::SparseMolecule;
+use crate::sparse_molecule::SparseMolecule;
 use serde::{Deserialize, Serialize};
 
 use super::step::Steps;
