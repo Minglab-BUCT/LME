@@ -7,24 +7,24 @@
       HRu: H1
       CAtom: C1
       CNeighbor: C3
-    # C2on:
-    #   type: IdMap
-    #   HC: C2Hon
-    #   HRu: H1
-    #   CAtom: C2
-    #   CNeighbor: C4
-    # C1down:
-    #   type: IdMap
-    #   HC: C1Hdown
-    #   HRu: H2
-    #   CAtom: C1
-    #   CNeighbor: C2
-    # C2down:
-    #   type: IdMap
-    #   HC: C2Hdown
-    #   HRu: H2
-    #   CAtom: C2
-    #   CNeighbor: C4
+    C2on:
+      type: IdMap
+      HC: C2Hon
+      HRu: H1
+      CAtom: C2
+      CNeighbor: C4
+    C1down:
+      type: IdMap
+      HC: C1Hdown
+      HRu: H2
+      CAtom: C1
+      CNeighbor: C2
+    C2down:
+      type: IdMap
+      HC: C2Hdown
+      HRu: H2
+      CAtom: C2
+      CNeighbor: C4
 - load: ./includes/check_distance.yaml
 - run:
     with: AppendLayers
