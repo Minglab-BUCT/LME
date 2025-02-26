@@ -19,12 +19,6 @@ jobs:
           toolchain: stable
           override: true
       
-      - name: Install dependencies
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: --locked
-      
       - name: Build documentation
         run: cargo doc --lib --no-deps
       
