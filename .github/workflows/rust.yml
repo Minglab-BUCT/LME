@@ -24,7 +24,7 @@ jobs:
 
       - name: Copy documentation files
         run: |
-          cp -r target/doc/* /root/docs/
+          cp -r target/doc/ /root/docs/
       
       - name: Checkout gh-pages branch
         uses: actions/checkout@v3
