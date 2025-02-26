@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["element_num_to_symbol","element_symbol_to_num","validated_element_num"],"struct":["Atom3D"]};

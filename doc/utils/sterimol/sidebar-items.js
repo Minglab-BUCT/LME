@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["auto_connect_bonds","get_molecular_graph","molecular_graph_walk","sterimol","tolman_cone_angle"],"struct":["RadiisItem"],"type":["RadiisTable"]};

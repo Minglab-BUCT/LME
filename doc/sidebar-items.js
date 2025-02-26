@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["chemistry","external","group_name","io","layer","sparse_molecule","utils","workflow"]};
