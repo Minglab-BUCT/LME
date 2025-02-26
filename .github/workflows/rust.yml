@@ -47,6 +47,5 @@ jobs:
           git commit -m "Update documentation"
       
       - name: Push to gh-pages branch
-        if: steps.commit.outputs.commit_hash != ''
         run: |
           git push origin HEAD:gh-pages
