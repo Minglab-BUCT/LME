@@ -47,17 +47,6 @@ jobs:
           git commit -m "Update documentation"
       
       - name: Push to gh-pages branch
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const repo = new GitHub.Repository({ owner: context.repo.owner, repo: context.repo.repo });
-            await repo.push({
-              ref: 'refs/heads/gh-pages',
-              force: true,
-              tree: await repo.createTree({
-                base_tree: null,
-                entries: [
-                  { path: 'docs', type: 'tree', sha: '' }
-                ]
-              })
-            });
+        if: steps.commit.outputs.commit_hash != ''
+        run: |
+          git push origin HEAD:gh-pages
