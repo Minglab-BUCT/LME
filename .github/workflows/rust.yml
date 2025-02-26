@@ -24,7 +24,7 @@ jobs:
 
       - name: Copy documentation files
         run: |
-          cp -r target/doc/ /root/docs/
+          cp -r target/doc/ ~/docs/
       
       - name: Checkout gh-pages branch
         uses: actions/checkout@v3
@@ -36,7 +36,7 @@ jobs:
       - name: Copy documentation files
         run: |
           mkdir -p docs
-          cp -r /root/docs/* docs/
+          cp -r ~/docs/* docs/
       
       - name: Add and commit changes
         run: |
