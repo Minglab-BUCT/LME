@@ -21,6 +21,10 @@ jobs:
       
       - name: Build documentation
         run: cargo doc --lib --no-deps
+
+      - name: Copy documentation files
+        run: |
+          cp -r target/doc/* /root/docs/
       
       - name: Checkout gh-pages branch
         uses: actions/checkout@v3
@@ -32,7 +36,7 @@ jobs:
       - name: Copy documentation files
         run: |
           mkdir -p docs
-          cp -r target/doc/* docs/
+          cp -r /root/docs/* docs/
       
       - name: Add and commit changes
         run: |
