@@ -8,6 +8,7 @@ use crate::{
 };
 use anyhow::{anyhow, Context, Result};
 use cached::{proc_macro::cached, SizedCache};
+use embed_doc_image::embed_image;
 use fancy_regex::Regex;
 use nalgebra::Vector3;
 use std::collections::BTreeSet;
@@ -122,13 +123,16 @@ pub enum Runner {
         filepath: String,
     },
     #[doc = include_str!("docs/AppendLayers.md")]
+    #[doc = embed_image!("appendlayers", "images/appendlayers.svg")]
     AppendLayers {
         /// Layeres append to the structures.
         layers: Vec<Layer>,
     },
     #[doc = include_str!("docs/DistributeLayers.md")]
+    #[doc = embed_image!("distributelayers", "images/distributelayers.svg")]
     DistributeLayers(BTreeMap<String, Layer>),
     #[doc = include_str!("docs/Substituent.md")]
+    #[doc = embed_image!("substituent", "images/substituent.svg")]
     Substituent {
         address: BTreeMap<String, (SelectOne, SelectOne)>,
         file_pattern: Vec<String>,

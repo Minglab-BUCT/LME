@@ -21,3 +21,4 @@ bincode = {version = "2.0.0-rc.3", features = ["serde"]}
 url = "2.5.4"
 petgraph = "0.6.5"
 fancy-regex = "0.14.0"
+embed-doc-image = "0.1.4"

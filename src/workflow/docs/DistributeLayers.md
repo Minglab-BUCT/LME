@@ -14,4 +14,6 @@ run:
         select: null
 ```
 
-And then structure A_R, A_S, B_R, B_S, C_R, C_S, D_R, D_S will be created.
+And then structure `A_R`, `A_S`, `B_R`, `B_S`, `C_R`, `C_S`, `D_R`, `D_S` will be created.
+
+![The diagram of the DistributeLayers example][distributelayers]

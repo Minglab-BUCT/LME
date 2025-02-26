@@ -1,5 +1,16 @@
 Change substituent on specified positions.
 
+A substituent process takes 2 structures and handle 4 atoms:
+
+- origin structure
+  - atom A: the atom connect to the substituent group on the origin structure bone
+  - atom B: the leading atom to tell the `Substituent` runner the orientation of the atom
+- substituent group structure
+  - atom C: the leading atom to control the direction of orientation of the substituent structure
+  - atom D: the atom connect to the main structure on the substituent group
+
+![The diagram of the substituent process][substituent]
+
 This runner takes two arguments:
 
 - address
