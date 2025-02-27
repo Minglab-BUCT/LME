@@ -20,6 +20,17 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 #[serde(tag = "type")]
 pub enum Layer {
+    /// This layer does nothing. It can be used as a placeholder, 
+    /// for example creating S configuration from R configuration structures:
+    /// 
+    /// ```yml
+    /// - run:
+    ///   with: DistributeLayers
+    ///   R:
+    ///     type: Transparent
+    ///   S:
+    ///     type: Mirror
+    /// ```
     Transparent,
     Fill {
         data: SparseMolecule,
@@ -32,9 +43,18 @@ pub enum Layer {
         name: String,
         data: SparseMolecule,
     },
+    /// Update atoms by a list. To remove an atom, use null
+    /// 
+    /// ```yml
+    /// type: SetAtom
+    /// atoms:
+    /// - [1, { element: 17, position: [1.0, 0.0, 0.0], formal_charge: 0 }]
+    /// - [2, { element: H, position: [3.0, 0.0, 0.0], formal_charge: 0.0 }]
+    /// ```
     SetAtom {
         atoms: Vec<(SelectOne, Option<Atom3D>)>,
     },
+
     UpdateFormalCharge {
         charges: Vec<(SelectOne, f64)>,
     },
@@ -67,8 +87,11 @@ pub enum Layer {
         #[serde(default)]
         select: SelectMany,
     },
+    /// Translate selected structure
     Translation {
+        /// Selected atoms
         select: SelectMany,
+        /// The translation vector
         #[bincode(with_serde)]
         vector: Vector3<f64>,
     },
@@ -87,39 +110,55 @@ pub enum Layer {
         #[bincode(with_serde)]
         direction: Vector3<f64>,
     },
+    /// Rotate selected structure
     Rotation {
+        /// Selected atoms
         select: SelectMany,
+        /// The rotatin center
         #[bincode(with_serde)]
         #[serde(default)]
         center: Point3<f64>,
+        /// The axis vector
         #[bincode(with_serde)]
         #[serde(default = "Vector3::x")]
         axis: Vector3<f64>,
+        /// The angle of the rotation
         angle: f64,
+        /// Use degree instead of radians
         #[serde(default)]
         degree: bool,
     },
+    /// Execute an isometry operation on selected structures
     Isometry {
+        /// Select atoms
         select: SelectMany,
+        /// The isometry operation matrix
         #[bincode(with_serde)]
         isometry: Isometry3<f64>,
     },
+    /// Execute Mirror operation on selected structures
     Mirror {
+        /// Select atoms
         #[serde(default)]
         select: SelectMany,
+        /// The center of the mirror plane
         #[bincode(with_serde)]
         #[serde(default)]
         center: Point3<f64>,
+        /// The law vector of the mirror plane
         #[bincode(with_serde)]
         #[serde(default = "Vector3::x")]
         law_vector: Vector3<f64>,
     },
+    /// Set atoms to null
     RemoveAtoms {
         select: SelectMany,
     },
+    /// Hide a collection of atoms
     Hide {
         select: SelectMany,
     },
+    /// Unhide a colletion of atoms
     UnHide {
         select: SelectMany,
     },
