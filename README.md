@@ -2,6 +2,8 @@
 
 This is a program for automatically constructing molecular models and prepare for first-principle computations by delaretive-programming input file and resources organized by it.
 
+> Full documents is on [GitHub Pages of this repository](https://minglab-buct.github.io/LME/lmers).
+
 ## Installation
 
 ### Software requirements
@@ -53,3 +55,8 @@ We provide here 3 examples of building chemical reaction datasets using LME plac
 The optimized XYZ coordinates is provided in `output` directory of these folders.
 
 To reproduce the construction process of input files `lmers -i lme_workflow.inp.yaml` (Using `cargo run --bin lmers -- -i lme_workflow.inp.yaml` if you are working in a Rust programming environment) to complete the construction of the input file. The construction process requires Python and OpenBabel (conda is recommended) to be installed, and the build of AKH also requires XTB 6.7.1, and you need to make sure that these programs are installed on your system and can be called directly before running LME.
+
+## Detailed manual
+
+1. Runners: <https://minglab-buct.github.io/LME/lmers/workflow/runner/enum.Runner.html>
+2. Layers: <https://minglab-buct.github.io/LME/lmers/layer/enum.Layer.html>
