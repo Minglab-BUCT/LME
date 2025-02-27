@@ -1,4 +1,4 @@
-!PAL16 B3LYP DEF2-SVPD Hirshfeld
+!PAL8 B3LYP D3BJ DEF2-SVP DEF2/J FREQ Hirshfeld
 
 %Method
   WriteJSONPropertyfile True
