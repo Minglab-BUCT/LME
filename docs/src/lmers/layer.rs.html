@@ -587,7 +587,46 @@
 <a href="#586" id="586">586</a>
 <a href="#587" id="587">587</a>
 <a href="#588" id="588">588</a>
-<a href="#589" id="589">589</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     collections::{BTreeMap, BTreeSet},
     f64::consts::PI,
     fmt::Display,
@@ -609,7 +648,18 @@
 <span class="attr">#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 #[serde(tag = <span class="string">"type"</span>)]
 </span><span class="kw">pub enum </span>Layer {
-    Transparent,
+    <span class="doccomment">/// This layer does nothing. It can be used as a placeholder, 
+    /// for example creating S configuration from R configuration structures:
+    /// 
+    /// ```yml
+    /// - run:
+    ///   with: DistributeLayers
+    ///   R:
+    ///     type: Transparent
+    ///   S:
+    ///     type: Mirror
+    /// ```
+    </span>Transparent,
     Fill {
         data: SparseMolecule,
     },
@@ -621,9 +671,18 @@
         name: String,
         data: SparseMolecule,
     },
-    SetAtom {
+    <span class="doccomment">/// Update atoms by a list. To remove an atom, use null
+    /// 
+    /// ```yml
+    /// type: SetAtom
+    /// atoms:
+    /// - [1, { element: 17, position: [1.0, 0.0, 0.0], formal_charge: 0 }]
+    /// - [2, { element: H, position: [3.0, 0.0, 0.0], formal_charge: 0.0 }]
+    /// ```
+    </span>SetAtom {
         atoms: Vec&lt;(SelectOne, <span class="prelude-ty">Option</span>&lt;Atom3D&gt;)&gt;,
     },
+
     UpdateFormalCharge {
         charges: Vec&lt;(SelectOne, f64)&gt;,
     },
@@ -656,9 +715,12 @@
         <span class="attr">#[serde(default)]
         </span>select: SelectMany,
     },
-    Translation {
-        select: SelectMany,
-        <span class="attr">#[bincode(with_serde)]
+    <span class="doccomment">/// Translate selected structure
+    </span>Translation {
+        <span class="doccomment">/// Selected atoms
+        </span>select: SelectMany,
+        <span class="doccomment">/// The translation vector
+        </span><span class="attr">#[bincode(with_serde)]
         </span>vector: Vector3&lt;f64&gt;,
     },
     TranslationTo {
@@ -676,40 +738,56 @@
         #[bincode(with_serde)]
         </span>direction: Vector3&lt;f64&gt;,
     },
-    Rotation {
-        select: SelectMany,
-        <span class="attr">#[bincode(with_serde)]
+    <span class="doccomment">/// Rotate selected structure
+    </span>Rotation {
+        <span class="doccomment">/// Selected atoms
+        </span>select: SelectMany,
+        <span class="doccomment">/// The rotatin center
+        </span><span class="attr">#[bincode(with_serde)]
         #[serde(default)]
         </span>center: Point3&lt;f64&gt;,
-        <span class="attr">#[bincode(with_serde)]
+        <span class="doccomment">/// The axis vector
+        </span><span class="attr">#[bincode(with_serde)]
         #[serde(default = <span class="string">"Vector3::x"</span>)]
         </span>axis: Vector3&lt;f64&gt;,
-        angle: f64,
-        <span class="attr">#[serde(default)]
+        <span class="doccomment">/// The angle of the rotation
+        </span>angle: f64,
+        <span class="doccomment">/// Use degree instead of radians
+        </span><span class="attr">#[serde(default)]
         </span>degree: bool,
     },
-    Isometry {
-        select: SelectMany,
-        <span class="attr">#[bincode(with_serde)]
+    <span class="doccomment">/// Execute an isometry operation on selected structures
+    </span>Isometry {
+        <span class="doccomment">/// Select atoms
+        </span>select: SelectMany,
+        <span class="doccomment">/// The isometry operation matrix
+        </span><span class="attr">#[bincode(with_serde)]
         </span>isometry: Isometry3&lt;f64&gt;,
     },
-    Mirror {
-        <span class="attr">#[serde(default)]
+    <span class="doccomment">/// Execute Mirror operation on selected structures
+    </span>Mirror {
+        <span class="doccomment">/// Select atoms
+        </span><span class="attr">#[serde(default)]
         </span>select: SelectMany,
-        <span class="attr">#[bincode(with_serde)]
+        <span class="doccomment">/// The center of the mirror plane
+        </span><span class="attr">#[bincode(with_serde)]
         #[serde(default)]
         </span>center: Point3&lt;f64&gt;,
-        <span class="attr">#[bincode(with_serde)]
+        <span class="doccomment">/// The law vector of the mirror plane
+        </span><span class="attr">#[bincode(with_serde)]
         #[serde(default = <span class="string">"Vector3::x"</span>)]
         </span>law_vector: Vector3&lt;f64&gt;,
     },
-    RemoveAtoms {
+    <span class="doccomment">/// Set atoms to null
+    </span>RemoveAtoms {
         select: SelectMany,
     },
-    Hide {
+    <span class="doccomment">/// Hide a collection of atoms
+    </span>Hide {
         select: SelectMany,
     },
-    UnHide {
+    <span class="doccomment">/// Unhide a colletion of atoms
+    </span>UnHide {
         select: SelectMany,
     },
 }
