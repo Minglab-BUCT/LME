@@ -1,0 +1,68 @@
+name: "Deploy Rust Docs to GitHub Pages"
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            artifact_name: linux-x64
+            compression: tar -czvf
+            extension: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: windows-x64
+            compression: zip -r
+            extension: zip
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Install musl-tools (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get install -y musl-tools
+
+      - name: Setup Rust environment
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ matrix.target }}
+          
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Build binary files in release mode
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare artificts
+        shell: bash
+        run: |
+          mkdir -p release
+          for bin in lmers obabelme; do
+            ext=""
+            [ "${{ matrix.os }}" == "windows-latest" ] && ext=".exe"
+            cp target/${{ matrix.target }}/release/${bin}${ext} release/
+          done
+
+      - name: Create archive
+        run: ${{ matrix.compression }} ${{ matrix.artifact_name }}.${{ matrix.extension }} release/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}-binaries
+          path: ${{ matrix.artifact_name }}.${{ matrix.extension }}
