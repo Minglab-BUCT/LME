@@ -25,10 +25,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       
-      - name: Install musl-tools and powershell (Linux)
+      - name: Install musl-tools and pwsh (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get install -y musl-tools
+        run: sudo apt-get install -y musl-tools powershell
 
+      - name: Setup Rust environment
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ matrix.target }}
+          
       - uses: actions/cache@v4
         with:
           path: |
@@ -38,33 +45,27 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Setup Rust environment
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          target: ${{ matrix.target }}
-          
+      
       - name: Build binary files in release mode
         run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare artificts
+        shell: bash
+        run: |
+          mkdir -p release
+          for bin in lmers obabelme; do
+            ext=""
+            [ "${{ matrix.os }}" == "windows-latest" ] && ext=".exe"
+            cp target/${{ matrix.target }}/release/${bin}${ext} release/
+          done
 
       - name: Create archive
         shell: pwsh
         run: |
-          # 统一使用PowerShell处理路径
-          $releasePath = "release"
-          
           if ("${{ matrix.os }}" -eq "windows-latest") {
-            # Windows使用原生压缩
-            $files = Get-ChildItem -Path $releasePath -File
-            Compress-Archive -Path $files.FullName -DestinationPath "${{ matrix.artifact_name }}.${{ matrix.extension }}" -CompressionLevel Optimal
+            Compress-Archive -Path release/* -DestinationPath "${{ matrix.artifact_name }}.${{ matrix.extension }}"
           } else {
-            # Linux使用tar并显式处理路径
-            $tarFiles = Get-ChildItem -Path $releasePath -File | Select-Object -ExpandProperty Name
-            Push-Location $releasePath
-            tar -czvf "../${{ matrix.artifact_name }}.${{ matrix.extension }}" $tarFiles
-            Pop-Location
+            & tar -czvf "${{ matrix.artifact_name }}.tar.gz" -C release .
           }
 
       - uses: actions/upload-artifact@v4
