@@ -2,7 +2,6 @@ name: "Create releases of LME"
 
 on:
   push:
-    branches: [main]
     tag: ["v*"]
 
 jobs:
@@ -25,6 +24,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref }}
       
       - name: Install musl-tools and pwsh (Linux)
         if: matrix.os == 'ubuntu-latest'

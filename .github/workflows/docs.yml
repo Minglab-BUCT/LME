@@ -2,7 +2,7 @@ name: "Deploy Rust Docs to GitHub Pages"
 
 on:
   push:
-    branches: [ main ]
+    tag: [v*]
 
 jobs:
   deploy-docs:
@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref }}
 
       - uses: actions/cache@v4
         with:
