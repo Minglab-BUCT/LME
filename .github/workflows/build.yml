@@ -2,7 +2,7 @@ name: "Create releases of LME"
 
 on:
   push:
-    tag: ["v*"]
+    tags: ["v*"]
 
 jobs:
   build:
