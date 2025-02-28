@@ -25,17 +25,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       
-      - name: Install musl-tools (Linux)
+      - name: Install musl-tools and powershell (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get install -y musl-tools
+        run: sudo apt-get install -y musl-tools powershell
 
-      - name: Setup Rust environment
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          target: ${{ matrix.target }}
-          
       - uses: actions/cache@v4
         with:
           path: |
@@ -45,7 +38,14 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      
+
+      - name: Setup Rust environment
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ matrix.target }}
+          
       - name: Build binary files in release mode
         run: cargo build --release --target ${{ matrix.target }}
 
