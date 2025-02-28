@@ -49,15 +49,14 @@ jobs:
       - name: Build binary files in release mode
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Prepare artificts
-        shell: bash
+      - name: Create archive
+        shell: pwsh
         run: |
-          mkdir -p release
-          for bin in lmers obabelme; do
-            ext=""
-            [ "${{ matrix.os }}" == "windows-latest" ] && ext=".exe"
-            cp target/${{ matrix.target }}/release/${bin}${ext} release/
-          done
+          if ("${{ matrix.os }}" -eq "windows-latest") {
+            Compress-Archive -Path release/* -DestinationPath "${{ matrix.artifact_name }}.${{ matrix.extension }}" -CompressionLevel Optimal
+          } else {
+            ${{ matrix.compression }} ${{ matrix.artifact_name }}.${{ matrix.extension }} release/*
+          }
 
       - name: Create archive
         run: ${{ matrix.compression }} ${{ matrix.artifact_name }}.${{ matrix.extension }} release/*
