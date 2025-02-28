@@ -27,7 +27,7 @@ jobs:
       
       - name: Install musl-tools and powershell (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get install -y musl-tools powershell
+        run: sudo apt-get install -y musl-tools
 
       - uses: actions/cache@v4
         with:
@@ -52,14 +52,20 @@ jobs:
       - name: Create archive
         shell: pwsh
         run: |
+          # 统一使用PowerShell处理路径
+          $releasePath = "release"
+          
           if ("${{ matrix.os }}" -eq "windows-latest") {
-            Compress-Archive -Path release/* -DestinationPath "${{ matrix.artifact_name }}.${{ matrix.extension }}" -CompressionLevel Optimal
+            # Windows使用原生压缩
+            $files = Get-ChildItem -Path $releasePath -File
+            Compress-Archive -Path $files.FullName -DestinationPath "${{ matrix.artifact_name }}.${{ matrix.extension }}" -CompressionLevel Optimal
           } else {
-            ${{ matrix.compression }} ${{ matrix.artifact_name }}.${{ matrix.extension }} release/*
+            # Linux使用tar并显式处理路径
+            $tarFiles = Get-ChildItem -Path $releasePath -File | Select-Object -ExpandProperty Name
+            Push-Location $releasePath
+            tar -czvf "../${{ matrix.artifact_name }}.${{ matrix.extension }}" $tarFiles
+            Pop-Location
           }
-
-      - name: Create archive
-        run: ${{ matrix.compression }} ${{ matrix.artifact_name }}.${{ matrix.extension }} release/*
 
       - uses: actions/upload-artifact@v4
         with:
