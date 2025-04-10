@@ -121,6 +121,8 @@ pub enum Runner {
     Break {
         /// The filepath to check if exists
         filepath: String,
+        /// Information of the break, tell the user what need to do maunally.
+        message: String
     },
     #[doc = include_str!("docs/AppendLayers.md")]
     #[doc = embed_image!("appendlayers", "images/appendlayers.svg")]
@@ -680,13 +682,16 @@ impl Runner {
                     })
                     .collect::<Result<BTreeMap<_, _>>>()?,
             )),
-            Self::Break { filepath } => {
+            Self::Break { filepath, message } => {
                 if std::fs::exists(filepath)? {
                     Ok(RunnerOutput::None)
                 } else {
                     Err(anyhow!(
-                        "File {} not exists, break. Create it to continue",
-                        filepath
+                        "The workflow is suspended and the control needs to be taken by you.\n
+                        Detailed infromation: \n
+                        {}\n
+                        When your operations have been done, create file {} and restart from last checkpoint.",
+                        message, filepath
                     ))
                 }
             }

@@ -17,6 +17,7 @@ use crate::{
     utils::geometric::axis_angle_for_b2a,
 };
 
+#[doc = include_str!("docs/Layers.md")]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 #[serde(tag = "type")]
 pub enum Layer {
@@ -54,7 +55,7 @@ pub enum Layer {
     SetAtom {
         atoms: Vec<(SelectOne, Option<Atom3D>)>,
     },
-
+    /// Update charges 
     UpdateFormalCharge {
         charges: Vec<(SelectOne, f64)>,
     },
