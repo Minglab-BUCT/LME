@@ -23,19 +23,19 @@
           start: 0, end: 15
         }],
         exclude: [R1, R2]
-      }]
+        }]
       - [OMe1, {
         includes: [[O1], [3], {
           start: 10,
           end: 12
         }]
-      }]
+        }]
       - [OMe2, {
         includes: [[O2], [5], {
           start: 13,
           end: 15
         }]
-      }]
+        }]
 - name: R2
   run:
     runner: Substituent
