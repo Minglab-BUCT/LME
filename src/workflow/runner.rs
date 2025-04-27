@@ -11,7 +11,7 @@ use cached::{proc_macro::cached, SizedCache};
 use embed_doc_image::embed_image;
 use fancy_regex::Regex;
 use nalgebra::Vector3;
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, fs, io::Read};
 use std::fs::File;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -114,6 +114,12 @@ impl Retain3DItem {
     }
 }
 
+#[derive(Deserialize, Debug)]
+struct AtomMapping {
+    atoms: SelectMany,
+    split: String
+}
+
 #[derive(Default, Debug, Deserialize)]
 #[serde(tag = "with")]
 pub enum Runner {
@@ -175,6 +181,8 @@ pub enum Runner {
         /// Set the template directory of the calculation
         #[serde(default)]
         skeleton: Option<PathBuf>,
+        #[serde(default)]
+        name_refs: BTreeMap<String, BTreeMap<String, AtomMapping>>,
         /// Rename the structure for output, please see `RenameOptions` for detailed use.
         #[serde(default)]
         redirect_to: Option<RenameOptions>,
@@ -350,6 +358,7 @@ impl Runner {
                 pre_format,
                 pre_filename,
                 skeleton,
+                name_refs,
                 stdin,
                 program,
                 args,
@@ -412,20 +421,12 @@ impl Runner {
                     }
 
                     let pre_path = working_directory.join(pre_filename);
-                    File::create(&pre_path)
-                        .with_context(|| {
-                            format!(
-                                "Unable to create pre-file for calculation at {:?}",
-                                pre_path
-                            )
-                        })?
-                        .write_all(pre_content.as_bytes())
-                        .with_context(|| {
-                            format!(
-                                "Unable to write to pre-file for calculation at {:?}",
-                                pre_path
-                            )
-                        })?;
+                    fs::write(&pre_path, &pre_content).with_context(|| {
+                        format!(
+                            "Unable to write to pre-file for calculation at {:?}",
+                            pre_path
+                        )
+                    })?;
                     if pre_format.export_map {
                         let mut map_file_path = working_directory.join(&pre_filename);
                         map_file_path.set_extension("map.json");
@@ -438,6 +439,22 @@ impl Runner {
                                 "Unable to serialize map file at {:?}, content: {:#?}",
                                 map_file_path, content
                             )
+                        })?;
+                    }
+                    for (filename, name_refs) in name_refs {
+                        let target_file_path = working_directory.join(filename);
+                        let replacement = name_refs.iter().map(|(name, mapping)| {
+                            let indexes = mapping.atoms.to_indexes(&structure);
+                            (name.to_string(), indexes.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(mapping.split.as_str()))
+                        }).collect::<Vec<(String, String)>>();
+                        let mut content = fs::read_to_string(&target_file_path).with_context(|| {
+                            format!("Unable to read file at {:?}", target_file_path)
+                        })?;
+                        for (pattern, replacement) in replacement {
+                            content = content.replace(&pattern, &replacement);
+                        }
+                        fs::write(&target_file_path, content).with_context(|| {
+                            format!("Unable to write file at {:?}", target_file_path)
                         })?;
                     }
                     // Execute the program
