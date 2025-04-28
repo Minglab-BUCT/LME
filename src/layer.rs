@@ -55,6 +55,10 @@ pub enum Layer {
     SetAtom {
         atoms: Vec<(SelectOne, Option<Atom3D>)>,
     },
+    /// Update atom elements
+    UpdateElement {
+        elements: Vec<(SelectOne, usize)>,
+    },
     /// Update charges 
     UpdateFormalCharge {
         charges: Vec<(SelectOne, f64)>,
@@ -212,6 +216,13 @@ impl Layer {
             Self::SetAtom { atoms } => {
                 for (select, atom) in atoms {
                     select.set_atom(&mut current, atom.clone());
+                }
+            }
+            Self::UpdateElement { elements } => {
+                for (select, element) in elements {
+                    let mut current_atom = select.get_atom(&current).ok_or(select.clone())?;
+                    current_atom.element = *element;
+                    select.set_atom(&mut current, Some(current_atom));
                 }
             }
             Self::UpdateFormalCharge { charges } => {
