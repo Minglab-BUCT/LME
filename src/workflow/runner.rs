@@ -11,11 +11,13 @@ use cached::{proc_macro::cached, SizedCache};
 use embed_doc_image::embed_image;
 use fancy_regex::Regex;
 use nalgebra::Vector3;
-use std::{collections::BTreeSet, fs, io::Read};
-use std::fs::File;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{collections::BTreeMap, io::Write};
+use std::{
+    collections::BTreeSet,
+    fs::{self, File},
+};
 
 use serde::Deserialize;
 use tempfile::tempdir;
@@ -69,55 +71,20 @@ pub struct FormatOptions {
     export_map: bool,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(untagged)]
-pub enum Property3D {
-    Distance(SelectOne, SelectOne),
-    Angle(SelectOne, SelectOne, SelectOne),
-}
-
-impl Property3D {
-    fn compute(&self, structure: &SparseMolecule) -> Result<f64, anyhow::Error> {
-        match self {
-            Self::Angle(a, b, c) => {
-                let a = a.get_atom(structure).ok_or(a.clone())?;
-                let b = b.get_atom(structure).ok_or(b.clone())?;
-                let c = c.get_atom(structure).ok_or(c.clone())?;
-                let ba = a.position - b.position;
-                let bc = c.position - b.position;
-                Ok((ba.dot(&bc) / (ba.norm() * bc.norm())).acos())
-            }
-            Self::Distance(a, b) => {
-                let a = a.get_atom(structure).ok_or(a.clone())?;
-                let b = b.get_atom(structure).ok_or(b.clone())?;
-                Ok((a.position - b.position).norm())
-            }
-        }
-    }
+fn default_splitter() -> String {
+    String::from(" ")
 }
 
 #[derive(Deserialize, Debug)]
-pub struct Retain3DItem {
-    min: f64,
-    max: f64,
-    target: Property3D,
-}
-
-impl Retain3DItem {
-    fn is_valid(&self, structure: &SparseMolecule) -> Result<bool, anyhow::Error> {
-        let result = self.target.compute(structure)?;
-        if self.min <= result && self.max >= result {
-            Ok(true)
-        } else {
-            Ok(false)
-        }
-    }
-}
-
-#[derive(Deserialize, Debug)]
-struct AtomMapping {
+pub struct AtomMapping {
+    /// The selected atoms to be put in target file
     atoms: SelectMany,
-    split: String
+    /// Splitter between atom indexes, default to space
+    #[serde(default = "default_splitter")]
+    split: String,
+    /// Whether the atom index starts from 1 or 0, default to 0
+    #[serde(default)]
+    start_from_1: bool,
 }
 
 #[derive(Default, Debug, Deserialize)]
@@ -128,7 +95,7 @@ pub enum Runner {
         /// The filepath to check if exists
         filepath: String,
         /// Information of the break, tell the user what need to do maunally.
-        message: String
+        message: String,
     },
     #[doc = include_str!("docs/AppendLayers.md")]
     #[doc = embed_image!("appendlayers", "images/appendlayers.svg")]
@@ -145,7 +112,7 @@ pub enum Runner {
         address: BTreeMap<String, (SelectOne, SelectOne)>,
         file_pattern: Vec<String>,
     },
-    /// Plugin runner will output the current workspace into a JSON file and 
+    /// Plugin runner will output the current workspace into a JSON file and
     /// call the program specified to handle it, and take the JSON output as
     /// the updated workspace.
     Plugin {
@@ -165,7 +132,7 @@ pub enum Runner {
     Rename(RenameOptions),
     #[doc = include_str!("docs/Calculation.md")]
     Calculation {
-        /// Set the working directory, for each structure in workspace, 
+        /// Set the working directory, for each structure in workspace,
         /// a directory will be created under the given working directory.
         working_directory: PathBuf,
         /// Set the format of the input file of the calculation program
@@ -173,53 +140,66 @@ pub enum Runner {
         /// Set the input filename for the calculation program
         pre_filename: String,
         /// Using serial mode to execute the calculation program.
-        /// 
-        /// Set it to `true` if the calculation program itself could take 
+        ///
+        /// Set it to `true` if the calculation program itself could take
         /// advantages of multi-core CPUs.
         #[serde(default)]
         serial_mode: bool,
         /// Set the template directory of the calculation
         #[serde(default)]
         skeleton: Option<PathBuf>,
+        /// Output the atom name and group information to files, making them to be used in the calculation
+        /// 
+        /// ```yaml
+        /// # Example: In constraint_opt.inp, the bond between CAtom and HAtom should be constrained
+        /// # but the indexes in xyz output is not known due to the complexity of the modeling process. 
+        /// # With the name_refs, the "C-H" string in constraint_opt.inp will be replaced by the indexes of CAtom and HAtom in the xyz file.
+        /// name_refs:
+        ///   constraint_opt.inp:
+        ///     C-H: 
+        ///       atoms: [CAtom, HAtom]
+        ///       split: ,
+        ///       start_from_1: false
+        /// ```
         #[serde(default)]
         name_refs: BTreeMap<String, BTreeMap<String, AtomMapping>>,
         /// Rename the structure for output, please see `RenameOptions` for detailed use.
         #[serde(default)]
         redirect_to: Option<RenameOptions>,
         /// Input the input file from stdin (true/false)
-        /// 
+        ///
         /// Default to false
         #[serde(default)]
         stdin: bool,
         /// The program to start, use a program name in PATH or give an absolute path.
-        /// 
+        ///
         /// Following folders will be automatically add to PATH when starting the program:
-        /// 
+        ///
         /// - the `bin` directory in the working directory (where the input file is)
         /// - the directory where LME executable program is
-        /// 
+        ///
         /// If no program need to be execute, ignore this field
         #[serde(default)]
         program: Option<String>,
-        /// The CLI arguments of the program to be called. 
-        /// 
+        /// The CLI arguments of the program to be called.
+        ///
         /// It's a list of strings, if there is numbers like `48`, write `'48'` instead
         #[serde(default)]
         args: Vec<String>,
         /// The environment variables to be set for the program to be called.
-        /// 
+        ///
         /// It's a map of environment variable key and values.
         #[serde(default)]
         envs: BTreeMap<String, String>,
         /// The output file format and filename
-        /// 
+        ///
         /// like `[xyz, output.xyz]`, ignore if the calculation result
         /// should not be used to update the structure.
         #[serde(default)]
         post_file: Option<(String, String)>,
-        /// Continue even if some calculation failed, default to false which means if one 
-        /// structure calculation failed, the LME will abort the following task. 
-        /// 
+        /// Continue even if some calculation failed, default to false which means if one
+        /// structure calculation failed, the LME will abort the following task.
+        ///
         /// If not every result is necessary or you want to drop some structures by calculation,
         /// set this to true.
         #[serde(default)]
@@ -427,29 +407,51 @@ impl Runner {
                             pre_path
                         )
                     })?;
+                    let namespace_mapping = NamespaceMapping::from(structure.clone());
                     if pre_format.export_map {
                         let mut map_file_path = working_directory.join(&pre_filename);
                         map_file_path.set_extension("map.json");
-                        let content = NamespaceMapping::from(structure.clone());
                         let file = File::create(&map_file_path).with_context(|| {
                             format!("Unable to create map file at {:?}", map_file_path)
                         })?;
-                        serde_json::to_writer(file, &content).with_context(|| {
+                        serde_json::to_writer(file, &namespace_mapping).with_context(|| {
                             format!(
                                 "Unable to serialize map file at {:?}, content: {:#?}",
-                                map_file_path, content
+                                map_file_path, namespace_mapping
                             )
                         })?;
                     }
                     for (filename, name_refs) in name_refs {
                         let target_file_path = working_directory.join(filename);
-                        let replacement = name_refs.iter().map(|(name, mapping)| {
-                            let indexes = mapping.atoms.to_indexes(&structure);
-                            (name.to_string(), indexes.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(mapping.split.as_str()))
-                        }).collect::<Vec<(String, String)>>();
-                        let mut content = fs::read_to_string(&target_file_path).with_context(|| {
-                            format!("Unable to read file at {:?}", target_file_path)
-                        })?;
+                        let replacement = name_refs
+                            .iter()
+                            .map(|(name, mapping)| {
+                                let indexes = mapping.atoms.to_indexes(&structure);
+                                let indexes = indexes
+                                    .into_iter()
+                                    .filter_map(|item| namespace_mapping.indexes.get(&item))
+                                    .map(|item| {
+                                        if mapping.start_from_1 {
+                                            item + 1
+                                        } else {
+                                            *item
+                                        }
+                                    })
+                                    .collect::<Vec<_>>();
+                                (
+                                    name.to_string(),
+                                    indexes
+                                        .iter()
+                                        .map(|i| i.to_string())
+                                        .collect::<Vec<_>>()
+                                        .join(mapping.split.as_str()),
+                                )
+                            })
+                            .collect::<Vec<(String, String)>>();
+                        let mut content =
+                            fs::read_to_string(&target_file_path).with_context(|| {
+                                format!("Unable to read file at {:?}", target_file_path)
+                            })?;
                         for (pattern, replacement) in replacement {
                             content = content.replace(&pattern, &replacement);
                         }
